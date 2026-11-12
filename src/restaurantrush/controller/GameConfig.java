@@ -13,9 +13,9 @@ public final class GameConfig {
     private GameConfig() {
     }
 
-    /** Salad, Burger and Pasta. */
+    /** Stage 3 menu: Salad, Burger, Pasta and the two combos. */
     public static Menu getMenu() {
-        return Menu.standardMenu();
+        return Menu.menuWithCombos();
     }
 
     public static int getNumTables() {

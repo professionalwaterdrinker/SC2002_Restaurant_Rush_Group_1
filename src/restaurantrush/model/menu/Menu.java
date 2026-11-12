@@ -8,12 +8,23 @@ import java.util.List;
 public class Menu {
     private final List<MenuItem> items = new ArrayList<>();
 
-    /** Salad, Burger, Pasta. */
+    /** Stage 1/2 menu: Salad, Burger, Pasta. */
     public static Menu standardMenu() {
         Menu menu = new Menu();
         menu.addItem(new Dish("Salad", 900, 1));
         menu.addItem(new Dish("Burger", 1500, 1));
         menu.addItem(new Dish("Pasta", 1800, 2));
+        return menu;
+    }
+
+    /** Stage 3 menu: the standard dishes plus combo meals. */
+    public static Menu menuWithCombos() {
+        Menu menu = standardMenu();
+        MenuItem salad = menu.findByName("Salad");
+        MenuItem burger = menu.findByName("Burger");
+        MenuItem pasta = menu.findByName("Pasta");
+        menu.addItem(new ComboMeal("Burger + Salad Combo", burger, salad));
+        menu.addItem(new ComboMeal("Pasta + Salad Combo", pasta, salad));
         return menu;
     }
 

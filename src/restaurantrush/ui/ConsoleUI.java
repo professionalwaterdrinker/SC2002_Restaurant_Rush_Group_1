@@ -3,6 +3,7 @@ package restaurantrush.ui;
 import java.util.List;
 import java.util.Scanner;
 
+import restaurantrush.model.HappyHour;
 import restaurantrush.model.Restaurant;
 import restaurantrush.model.Table;
 import restaurantrush.model.customer.Customer;
@@ -33,6 +34,7 @@ public class ConsoleUI {
         System.out.println("Revenue: " + MoneyUtils.formatCents(restaurant.getTotalRevenueCents())
                 + " | Paid customers: " + restaurant.getRoster().paidCount()
                 + " | Average satisfaction (paid): " + restaurant.getRoster().averagePaidSatisfactionText());
+        System.out.println(happyHourLine(restaurant.getHappyHour()));
         if (arrival != null) {
             System.out.println("Arrival: " + arrival.label() + " joins the waiting queue with satisfaction "
                     + arrival.getSatisfaction() + ".");
@@ -127,5 +129,14 @@ public class ConsoleUI {
                 System.out.println("Invalid choice: \"" + bad + "\" is not a whole number. Try again.");
             }
         }
+    }
+
+    private static String happyHourLine(HappyHour happyHour) {
+        if (happyHour.isActive()) {
+            return "Happy Hour: ACTIVE, " + happyHour.getTurnsRemaining()
+                    + " turn(s) remaining including this one (orders taken now get "
+                    + happyHour.getDiscountPercent() + "% off)";
+        }
+        return happyHour.canActivate() ? "Happy Hour: available (not used yet)" : "Happy Hour: already used";
     }
 }

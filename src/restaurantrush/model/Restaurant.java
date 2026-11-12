@@ -13,6 +13,8 @@ public class Restaurant {
     private final WaitingQueue waitingQueue;
     private final CustomerRoster roster;
     private final Menu menu;
+    private final HappyHour happyHour;
+    private final PricingService pricingService;
     private int totalRevenueCents;
 
     public Restaurant(int numTables, Menu menu) {
@@ -23,6 +25,8 @@ public class Restaurant {
         this.waitingQueue = new WaitingQueue();
         this.roster = new CustomerRoster();
         this.menu = menu;
+        this.happyHour = new HappyHour();
+        this.pricingService = new PricingService(happyHour);
         this.totalRevenueCents = 0;
     }
 
@@ -71,6 +75,14 @@ public class Restaurant {
         return menu;
     }
 
+    public HappyHour getHappyHour() {
+        return happyHour;
+    }
+
+    public PricingService getPricingService() {
+        return pricingService;
+    }
+
     public void addArrival(Customer customer) {
         if (customer != null) {
             roster.add(customer);
@@ -110,6 +122,28 @@ public class Restaurant {
             }
         }
         return departed;
+    }
+
+    /**
+     * Happy Hour, start of a turn: while it is active, customers still waiting
+     * for a table or for food recover satisfaction (capped at 100).
+     */
+    public void applyHappyHourRecovery() {
+        if (happyHour.isActive()) {
+            roster.recoverWaiting(HappyHour.SATISFACTION_RECOVERY);
+        }
+    }
+
+    /**
+     * Manager switches Happy Hour on at the start of a turn (once per game).
+     * @return false if it has already been used
+     */
+    public boolean activateHappyHour() {
+        if (!happyHour.activate()) {
+            return false;
+        }
+        applyHappyHourRecovery();
+        return true;
     }
 
     public Table findTableWithCustomer(Customer customer) {

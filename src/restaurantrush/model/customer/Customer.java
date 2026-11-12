@@ -4,9 +4,9 @@ import java.util.List;
 
 import restaurantrush.model.CustomerStatus;
 import restaurantrush.model.Order;
+import restaurantrush.model.PricingService;
 import restaurantrush.model.menu.Menu;
 import restaurantrush.model.menu.MenuItem;
-import restaurantrush.util.MoneyUtils;
 
 public abstract class Customer {
     private final int id;
@@ -94,12 +94,12 @@ public abstract class Customer {
 
     /**
      * The customer chooses their own food (the manager never does) and the bill
-     * is fixed now, after this customer's own discount.
+     * is locked in now: own discount first, then Happy Hour if it is active.
      */
-    public Order placeOrder(Menu menu) {
+    public Order placeOrder(Menu menu, PricingService pricing) {
         check(whyNotOrder());
         MenuItem item = chooseFood(menu);
-        int bill = MoneyUtils.percentOff(item.getPriceCents(), getDiscountPercent());
+        int bill = pricing.calculateBill(item, getDiscountPercent());
         order = new Order(id, item, bill);
         status = CustomerStatus.ORDERED;
         return order;
@@ -142,6 +142,12 @@ public abstract class Customer {
             order.cancel();
         }
         return true;
+    }
+
+    public void recoverSatisfaction(int amount) {
+        if (status.isWaitingForService()) {
+            satisfaction = Math.min(100, satisfaction + amount);
+        }
     }
 
     private void check(String reason) {

@@ -9,6 +9,7 @@ import restaurantrush.model.Restaurant;
 import restaurantrush.model.customer.CustomerFactory;
 import restaurantrush.model.staff.Cashier;
 import restaurantrush.model.staff.Chef;
+import restaurantrush.model.staff.Host;
 import restaurantrush.model.staff.Waiter;
 import restaurantrush.ui.ConsoleUI;
 
@@ -21,7 +22,7 @@ public class Main {
 
         GameController controller = new GameController(restaurant, console,
                 CustomerFactory.baseSetting(), new Waiter("Wendy"), new Chef("Carl"),
-                new Cashier("Cathy"), result);
+                new Cashier("Cathy"), new Host("Hana"), result);
 
         try {
             controller.startGame();

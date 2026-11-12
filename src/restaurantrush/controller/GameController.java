@@ -11,6 +11,8 @@ import restaurantrush.model.customer.CustomerFactory;
 import restaurantrush.model.staff.ActionResult;
 import restaurantrush.model.staff.Cashier;
 import restaurantrush.model.staff.Chef;
+import restaurantrush.model.staff.Host;
+import restaurantrush.model.staff.SeatingStaff;
 import restaurantrush.model.staff.Staff;
 import restaurantrush.model.staff.Waiter;
 import restaurantrush.ui.ConsoleUI;
@@ -27,20 +29,23 @@ public class GameController {
     private final Waiter waiter;
     private final Chef chef;
     private final Cashier cashier;
+    private final Host host;
     private final GameResult result;
     private final List<Staff> staff = new ArrayList<>();
     private final int totalTurns = GameConfig.getTurns();
 
     public GameController(Restaurant restaurant, ConsoleUI ui, CustomerFactory arrivals,
-            Waiter waiter, Chef chef, Cashier cashier, GameResult result) {
+            Waiter waiter, Chef chef, Cashier cashier, Host host, GameResult result) {
         this.restaurant = restaurant;
         this.ui = ui;
         this.arrivals = arrivals;
         this.waiter = waiter;
         this.chef = chef;
         this.cashier = cashier;
+        this.host = host;
         this.result = result;
         // Display order; also the order in which they act each turn.
+        staff.add(host);
         staff.add(waiter);
         staff.add(chef);
         staff.add(cashier);
@@ -59,6 +64,7 @@ public class GameController {
         for (Staff s : staff) {
             s.startTurn(turn);
         }
+        restaurant.applyHappyHourRecovery(); // second Happy Hour turn, if it is running
 
         // Step 1: arrivals
         Customer arrival = arrivals.arrivalFor(turn);
@@ -66,14 +72,40 @@ public class GameController {
         ui.displayTurnStart(turn, totalTurns, restaurant, staff, arrival);
 
         // Steps 2 and 3: manager choices. Each choice is carried out at once, in the
-        // order Waiter then Chef, so the Waiter always acts before the Chef.
+        // order Host, Waiter, Chef, so the Waiter always acts before the Chef.
+        offerHappyHour();
+        hostChoice();
         waiterChoice();
         chefChoice();
 
         // Steps 4 and 5, then the end-of-turn results (Section 3.5).
         List<String> events = eatingPaymentAndWaiting(turn);
         ui.displayTurnResults(turn, totalTurns, restaurant, events);
+        restaurant.getHappyHour().endTurn();
         ui.waitForContinue();
+    }
+
+    /** Happy Hour can be switched on once per game, at the start of a turn. */
+    private void offerHappyHour() {
+        if (!restaurant.getHappyHour().canActivate()) {
+            return;
+        }
+        int choice = ui.askChoice("Happy Hour: 1 = activate now (this turn and the next), 2 = not now", 1, 2);
+        if (choice == 1 && restaurant.activateHappyHour()) {
+            ui.displayMessage("OK: Happy Hour is ON. Waiting customers recover satisfaction; "
+                    + "orders taken while it is active get 20% off.");
+            ui.displayState(restaurant);
+        }
+    }
+
+    private void hostChoice() {
+        while (host.isAvailable()) {
+            int choice = ui.askChoice("Host: 1 = seat a queued customer, 2 = wait", 1, 2);
+            if (choice == 2) {
+                return;
+            }
+            report(seatWith(host));
+        }
     }
 
     private void waiterChoice() {
@@ -84,7 +116,7 @@ public class GameController {
                 return;
             }
             if (choice == 1) {
-                report(seatCustomer());
+                report(seatWith(waiter));
             } else if (choice == 2) {
                 report(waiter.takeOrder(askTable("  Take the order at which table?"), restaurant));
             } else {
@@ -104,7 +136,7 @@ public class GameController {
     }
 
     /** The manager picks which queued customer to seat and at which table. */
-    private ActionResult seatCustomer() {
+    private ActionResult seatWith(SeatingStaff seater) {
         WaitingQueue queue = restaurant.getWaitingQueue();
         Customer customer = null;
         Table table = null;
@@ -112,7 +144,7 @@ public class GameController {
             customer = queue.get(ui.askChoice("  Seat which queued customer? (queue position)", 1, queue.size()));
             table = askTable("  Seat " + customer.label() + " at which table?");
         }
-        return waiter.seatCustomer(customer, table, queue);
+        return seater.seatCustomer(customer, table, queue);
     }
 
     private Table askTable(String prompt) {

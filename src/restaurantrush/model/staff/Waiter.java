@@ -6,12 +6,11 @@ import java.util.List;
 import restaurantrush.model.Order;
 import restaurantrush.model.Restaurant;
 import restaurantrush.model.Table;
-import restaurantrush.model.WaitingQueue;
 import restaurantrush.model.customer.Customer;
 import restaurantrush.util.MoneyUtils;
 
 /** Seats a customer, takes an order or serves a READY order: one task per turn. */
-public class Waiter extends Staff {
+public class Waiter extends SeatingStaff {
 
     public Waiter(String name) {
         super(name);
@@ -41,52 +40,7 @@ public class Waiter extends Staff {
         return tasks;
     }
 
-    /** Seats one queued customer at a free table. */
-    public ActionResult seatCustomer(Customer customer, Table table, WaitingQueue queue) {
-        return perform(() -> {
-            if (queue.isEmpty()) {
-                return ActionResult.failure("The waiting queue is empty, so there is nobody to seat.");
-            }
-            if (customer == null) {
-                return ActionResult.failure("There is no customer at that queue position.");
-            }
-            if (table == null) {
-                return ActionResult.failure("There is no table with that number.");
-            }
-            if (!queue.contains(customer)) {
-                return ActionResult.failure(customer.label() + " is not in the waiting queue.");
-            }
-            String why = customer.whyNotSeat();
-            if (why != null) {
-                return ActionResult.failure(why);
-            }
-            if (table.isOccupied()) {
-                return ActionResult.failure("Table " + table.getTableNumber() + " is occupied by "
-                        + table.getCurrentCustomer().label() + ".");
-            }
-            queue.remove(customer);
-            table.seatCustomer(customer);
-            customer.seat(getCurrentTurn());
-            return ActionResult.success(getRole() + " seated " + customer.label() + " at table "
-                    + table.getTableNumber() + ".");
-        });
-    }
-
-    /** Describes the seating task if it is possible right now, otherwise null. */
-    private String seatingTask(Restaurant restaurant) {
-        int waiting = restaurant.getWaitingQueue().size();
-        List<Table> free = restaurant.getFreeTables();
-        if (waiting == 0 || free.isEmpty()) {
-            return null;
-        }
-        StringBuilder tables = new StringBuilder();
-        for (Table t : free) {
-            tables.append(tables.length() == 0 ? "" : ", ").append(t.getTableNumber());
-        }
-        return "seat a queued customer (" + waiting + " waiting; free table(s): " + tables + ")";
-    }
-
-    /** The customer chooses the food. */
+    /** The customer chooses the food; the price is locked in at this moment. */
     public ActionResult takeOrder(Table table, Restaurant restaurant) {
         return perform(() -> {
             if (table == null) {
@@ -101,10 +55,10 @@ public class Waiter extends Staff {
             if (why != null) {
                 return ActionResult.failure(why);
             }
-            Order order = customer.placeOrder(restaurant.getMenu());
+            Order order = customer.placeOrder(restaurant.getMenu(), restaurant.getPricingService());
             return ActionResult.success(customer.label() + " at table " + table.getTableNumber()
                     + " chose " + order.getItem().getName() + " ("
-                    + order.getPrepUnitsRequired() + " preparation unit(s)). Bill: "
+                    + order.getPrepUnitsRequired() + " preparation unit(s)). Bill locked at "
                     + MoneyUtils.formatCents(order.getBillCents()) + ".");
         });
     }
