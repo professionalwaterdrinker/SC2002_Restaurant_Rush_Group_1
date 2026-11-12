@@ -12,6 +12,8 @@ public class Restaurant {
     private final WaitingQueue waitingQueue;
     private final CustomerRoster roster;
     private final Menu menu;
+    private final HappyHour happyHour;
+    private final PricingService pricingService;
     private int totalRevenueCents;
 
     public Restaurant(int numTables, Menu menu) {
@@ -22,6 +24,8 @@ public class Restaurant {
         this.waitingQueue = new WaitingQueue();
         this.roster = new CustomerRoster();
         this.menu = menu;
+        this.happyHour = new HappyHour();
+        this.pricingService = new PricingService(happyHour);
         this.totalRevenueCents = 0;
     }
 
@@ -57,6 +61,14 @@ public class Restaurant {
 
     public Menu getMenu() {
         return menu;
+    }
+
+    public HappyHour getHappyHour() {
+        return happyHour;
+    }
+
+    public PricingService getPricingService() {
+        return pricingService;
     }
 
     public void addArrival(Customer customer) {

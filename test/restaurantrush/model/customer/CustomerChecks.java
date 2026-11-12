@@ -3,8 +3,10 @@ package restaurantrush.model.customer;
 import java.util.List;
 
 import restaurantrush.model.CustomerStatus;
+import restaurantrush.model.HappyHour;
 import restaurantrush.model.Order;
 import restaurantrush.model.OrderStatus;
+import restaurantrush.model.PricingService;
 import restaurantrush.model.WaitingQueue;
 import restaurantrush.model.menu.Menu;
 
@@ -21,6 +23,7 @@ public class CustomerChecks {
         invalidSteps();
         billsAndDiscounts();
         foodChoice();
+        happyHourRecovery();
         queueBehaviour();
         baseArrivals();
         rosterTotals();
@@ -29,6 +32,7 @@ public class CustomerChecks {
 
     static void exampleFromBrief() {
         Menu menu = Menu.standardMenu();
+        PricingService pricing = new PricingService(new HappyHour());
         Customer c = new RegularCustomer(3, 1);
 
         c.seat(1);
@@ -36,7 +40,7 @@ public class CustomerChecks {
         c.endOfTurn(1);
         check(c.getSatisfaction() == 92, "turn 1 ends at 92");
 
-        Order order = c.placeOrder(menu, 1);
+        Order order = c.placeOrder(menu, pricing, 2);
         check(order.getItem().getName().equals("Pasta"), "customer 3 orders Pasta");
         check(order.getCustomerId() == 3 && c.getOrder() == order, "order is linked to the customer");
         order.cookOneUnit();
@@ -82,7 +86,7 @@ public class CustomerChecks {
     static void leavingCancelsTheOrder() {
         Customer c = new CriticCustomer(1, 1);
         c.seat(1);
-        Order order = c.placeOrder(Menu.standardMenu(), 1);
+        Order order = c.placeOrder(Menu.standardMenu(), new PricingService(new HappyHour()), 1);
         turnsUntilLeaving(c);
         check(order.getStatus() == OrderStatus.CANCELLED, "order cancelled when the customer leaves");
         check(!order.cookOneUnit(), "the Chef cannot cook a cancelled order");
@@ -110,14 +114,15 @@ public class CustomerChecks {
 
     static void invalidSteps() {
         Menu menu = Menu.standardMenu();
+        PricingService pricing = new PricingService(new HappyHour());
         Customer c = new RegularCustomer(3, 1);
-        expectRefused(() -> c.placeOrder(menu, 1), "cannot order before being seated");
+        expectRefused(() -> c.placeOrder(menu, pricing, 1), "cannot order before being seated");
         expectRefused(() -> c.serve(1), "cannot be served before ordering");
         expectRefused(() -> c.pay(1), "cannot pay before ready to pay");
         c.seat(1);
         expectRefused(() -> c.seat(1), "cannot be seated twice");
         check(c.whyNotSeat().contains("seated"), "refusal says what state they are in");
-        c.placeOrder(menu, 1);
+        c.placeOrder(menu, pricing, 1);
         check(c.whyNotServe().contains("Pasta is not ready yet (0 of 2"), "refusal explains the dish isn't ready");
         expectRefused(() -> c.serve(1), "cannot serve a dish that isn't READY");
         check(c.getStatus() == CustomerStatus.ORDERED, "a refused step changes nothing");
@@ -125,11 +130,23 @@ public class CustomerChecks {
 
     static void billsAndDiscounts() {
         Menu menu = Menu.standardMenu();
-        check(billFor(new RegularCustomer(1, 1), menu) == 900, "Regular Salad is $9.00");
-        check(billFor(new RegularCustomer(2, 1), menu) == 1500, "Regular Burger is $15.00");
-        check(billFor(new VIPCustomer(2, 4), menu) == 1350, "VIP Burger is $13.50");
-        check(billFor(new VIPCustomer(1, 4), menu) == 810, "VIP Salad is $8.10");
-        check(billFor(new CriticCustomer(3, 7), menu) == 1800, "Critic pays full price for Pasta");
+        HappyHour happyHour = new HappyHour();
+        PricingService pricing = new PricingService(happyHour);
+        check(billFor(new RegularCustomer(2, 1), menu, pricing) == 1500, "Regular Burger is $15.00");
+        check(billFor(new VIPCustomer(2, 4), menu, pricing) == 1350, "VIP Burger is $13.50");
+        check(billFor(new CriticCustomer(3, 7), menu, pricing) == 1800, "Critic pays full price for Pasta");
+
+        happyHour.activate();
+        check(billFor(new VIPCustomer(2, 4), menu, pricing) == 1080, "VIP Burger in Happy Hour is $10.80");
+        check(billFor(new RegularCustomer(1, 1), menu, pricing) == 720, "Regular Salad in Happy Hour is $7.20");
+
+        HappyHour hh2 = new HappyHour();
+        PricingService p2 = new PricingService(hh2);
+        Customer c = new RegularCustomer(2, 1);
+        c.seat(1);
+        Order o = c.placeOrder(menu, p2, 1);
+        hh2.activate();
+        check(o.getBillCents() == 1500, "Happy Hour starting later doesn't change a placed order");
     }
 
     static void foodChoice() {
@@ -142,6 +159,30 @@ public class CustomerChecks {
         check(new VIPCustomer(2, 4).chooseFood(menu).getName().equals("Burger"), "VIP uses the same rotation");
         check(new CriticCustomer(1, 1).chooseFood(menu).getName().equals("Pasta"), "Critic picks the most expensive");
 
+        Menu combos = Menu.menuWithCombos();
+        check(new CriticCustomer(3, 7).chooseFood(combos).getName().equals("Pasta + Salad Combo"),
+                "Critic picks the Pasta + Salad Combo in Stage 3");
+        check(new RegularCustomer(4, 10).chooseFood(combos).getName().equals("Burger + Salad Combo"),
+                "rotation reaches combos in Stage 3");
+    }
+
+    static void happyHourRecovery() {
+        Customer waiting = new RegularCustomer(1, 1);
+        waiting.endOfTurn(1);
+        waiting.endOfTurn(2);
+        waiting.recoverSatisfaction(HappyHour.SATISFACTION_RECOVERY);
+        check(waiting.getSatisfaction() == 99, "waiting customer recovers 15");
+        waiting.recoverSatisfaction(HappyHour.SATISFACTION_RECOVERY);
+        check(waiting.getSatisfaction() == 100, "recovery is capped at 100");
+
+        Customer eating = new RegularCustomer(2, 1);
+        eating.seat(1);
+        eating.endOfTurn(1);
+        Order o = eating.placeOrder(Menu.standardMenu(), new PricingService(new HappyHour()), 2);
+        o.cookOneUnit();
+        eating.serve(3);
+        eating.recoverSatisfaction(HappyHour.SATISFACTION_RECOVERY);
+        check(eating.getSatisfaction() == 92, "customers already served do not recover");
     }
 
     static void queueBehaviour() {
@@ -185,6 +226,7 @@ public class CustomerChecks {
         check(r.averagePaidSatisfactionText().equals("N/A"), "average is N/A before anyone pays");
 
         Menu menu = Menu.standardMenu();
+        PricingService pricing = new PricingService(new HappyHour());
         Customer a = new RegularCustomer(1, 1);
         Customer b = new VIPCustomer(2, 1);
         Customer c = new CriticCustomer(3, 1);
@@ -193,9 +235,9 @@ public class CustomerChecks {
         r.add(c);
         check(r.findById(2) == b && r.findById(9) == null, "find a customer by id");
         a.seat(1);
-        a.placeOrder(menu, 1).cookOneUnit();
+        a.placeOrder(menu, pricing, 1).cookOneUnit();
         b.seat(1);
-        b.placeOrder(menu, 1).cookOneUnit();
+        b.placeOrder(menu, pricing, 1).cookOneUnit();
         r.endOfTurn(1);
         a.serve(2);
         b.serve(2);
@@ -215,7 +257,7 @@ public class CustomerChecks {
 
     static Customer servedCustomer(Customer c, int serveTurn) {
         c.seat(1);
-        Order o = c.placeOrder(Menu.standardMenu(), 1);
+        Order o = c.placeOrder(Menu.standardMenu(), new PricingService(new HappyHour()), 1);
         while (!o.isReady()) {
             o.cookOneUnit();
         }
@@ -223,9 +265,9 @@ public class CustomerChecks {
         return c;
     }
 
-    static int billFor(Customer c, Menu menu) {
+    static int billFor(Customer c, Menu menu, PricingService pricing) {
         c.seat(1);
-        return c.placeOrder(menu, 1).getBillCents();
+        return c.placeOrder(menu, pricing, 1).getBillCents();
     }
 
     static int turnsUntilLeaving(Customer c) {

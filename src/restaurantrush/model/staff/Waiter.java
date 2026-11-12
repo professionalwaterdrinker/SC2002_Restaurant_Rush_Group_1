@@ -30,7 +30,8 @@ public class Waiter extends Staff {
             if (why != null) {
                 return ActionResult.failure(why);
             }
-            Order order = customer.placeOrder(restaurant.getMenu(), getCurrentTurn());
+            Order order = customer.placeOrder(restaurant.getMenu(),
+                    restaurant.getPricingService(), getCurrentTurn());
             return ActionResult.success(customer.label() + " ordered "
                     + order.getItem().getName() + ".");
         });

@@ -3,7 +3,7 @@ package restaurantrush.controller;
 import restaurantrush.model.menu.Menu;
 
 public class GameConfig {
-    private static Menu menu = Menu.standardMenu();
+    private static Menu menu = Menu.menuWithCombos();
     private static int numTables = 2;
     private static int turns = 18;
     private static int paidCustomersGoal = 4;

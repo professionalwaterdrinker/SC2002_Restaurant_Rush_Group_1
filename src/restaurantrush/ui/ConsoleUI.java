@@ -18,6 +18,9 @@ public class ConsoleUI {
     public void displayTurnHeader(int turn, Restaurant restaurant) {
         System.out.println("\n=================================================================================================");
         System.out.println("                                        TURN " + turn + " / 18");
+        if (restaurant.getHappyHour().isActive()) {
+            System.out.println("   *** HAPPY HOUR ACTIVE (" + restaurant.getHappyHour().getTurnsRemaining() + " turns left) ***");
+        }
         System.out.println("=================================================================================================");
 
         String rev = MoneyUtils.formatCents(restaurant.getTotalRevenueCents());

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import restaurantrush.model.Restaurant;
+import restaurantrush.model.HappyHour;
 import restaurantrush.model.Table;
 import restaurantrush.model.customer.CustomerFactory;
 import restaurantrush.model.customer.Customer;
@@ -11,6 +12,7 @@ import restaurantrush.model.WaitingQueue;
 import restaurantrush.model.staff.Cashier;
 import restaurantrush.model.staff.Waiter;
 import restaurantrush.model.staff.Chef;
+import restaurantrush.model.staff.Host;
 import restaurantrush.ui.ConsoleUI;
 
 public class GameController {
@@ -19,16 +21,18 @@ public class GameController {
     private Waiter waiter;
     private Chef chef;
     private Cashier cashier;
+    private Host host;
     private GameResult result;
     
     private static int turn = 1;
 
-    public GameController(Restaurant restaurant, ConsoleUI console, Waiter waiter, Chef chef, Cashier cashier, GameResult result) {
+    public GameController(Restaurant restaurant, ConsoleUI console, Waiter waiter, Chef chef, Cashier cashier, Host host, GameResult result) {
         this.restaurant = restaurant;
         this.console = console;
         this.waiter = waiter;
         this.chef = chef;
         this.cashier = cashier;
+        this.host = host;
         this.result = result;
     }
 
@@ -38,7 +42,11 @@ public class GameController {
             waiter.startTurn(turn);
             chef.startTurn(turn);
             cashier.startTurn(turn);
-
+            host.startTurn(turn);
+            
+            if (restaurant.getHappyHour().isActive() && restaurant.getHappyHour().getTurnsRemaining() < HappyHour.DURATION_TURNS) {
+                restaurant.getRoster().recoverWaiting(HappyHour.SATISFACTION_RECOVERY);
+            }
 
             customerArrival();
             System.out.println("Turn Start");
@@ -50,6 +58,7 @@ public class GameController {
             console.displayTurnHeader(turn, restaurant);
             console.displayTurnsUsed(turn, GameConfig.getTurns());
             console.getIntInput("Enter 0 to continue to next turn...", 0, 0);
+            restaurant.getHappyHour().endTurn();
             turn++;
         }
     }
@@ -63,6 +72,28 @@ public class GameController {
 
     //step 2: manager choice + step 3: kitchen and serving, waiter acts first then chef
     public void managerChoice() {
+        if (restaurant.getHappyHour().canActivate()) {
+            int happyHourChoice = console.getIntInput("Activate Happy Hour? (1:yes, 2:no): ", 1, 2);
+            if (happyHourChoice == 1) {
+                restaurant.getHappyHour().activate();
+                restaurant.getRoster().recoverWaiting(HappyHour.SATISFACTION_RECOVERY);
+                console.displayTurnHeader(turn, restaurant);
+            }
+        }
+
+        while (!host.hasActedThisTurn()) {
+            int hostChoice = console.getIntInput("Host: choose action (1:seat, 2:wait): ", 1, 2);
+            WaitingQueue queue = restaurant.getWaitingQueue();
+            
+            if (hostChoice == 1) {
+                System.out.println(host.seatCustomer(chooseQueuedCustomer(queue), restaurant.getFirstFreeTable(), queue).toString());
+                console.displayTurnHeader(turn, restaurant);
+            }
+            else if (hostChoice == 2) {
+                break;
+            }
+        }
+
         while (!waiter.hasActedThisTurn()) {
             int waiterChoice = console.getIntInput("Waiter: choose action (1:seat, 2:take order, 3:serve, 4:wait): ", 1, 4);
             WaitingQueue queue = restaurant.getWaitingQueue();
@@ -127,6 +158,7 @@ public class GameController {
         List<String> tasks = new ArrayList<>();
         boolean canSeat = !restaurant.getWaitingQueue().isEmpty() && restaurant.getFirstFreeTable() != null;
         if (canSeat) {
+            tasks.add("Host: seat a queued customer");
             tasks.add("Waiter: seat a queued customer");
         }
         for (Table t : restaurant.getTables()) {

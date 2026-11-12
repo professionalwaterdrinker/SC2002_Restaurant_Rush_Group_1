@@ -4,6 +4,7 @@ import java.util.List;
 
 import restaurantrush.model.CustomerStatus;
 import restaurantrush.model.Order;
+import restaurantrush.model.PricingService;
 import restaurantrush.model.menu.Menu;
 import restaurantrush.model.menu.MenuItem;
 
@@ -91,11 +92,10 @@ public abstract class Customer {
         status = CustomerStatus.SEATED;
     }
 
-    public Order placeOrder(Menu menu, int turn) {
+    public Order placeOrder(Menu menu, PricingService pricing, int turn) {
         check(whyNotOrder());
         MenuItem item = chooseFood(menu);
-        // own discount (VIP 10%), rounded to the nearest cent
-        int bill = Math.round(item.getPriceCents() * (100 - getDiscountPercent()) / 100.0f);
+        int bill = pricing.calculateBill(item, getDiscountPercent());
         order = new Order(id, item, bill);
         status = CustomerStatus.ORDERED;
         return order;
@@ -138,6 +138,12 @@ public abstract class Customer {
             order.cancel();
         }
         return true;
+    }
+
+    public void recoverSatisfaction(int amount) {
+        if (status.isWaitingForService()) {
+            satisfaction = Math.min(100, satisfaction + amount);
+        }
     }
 
     private void check(String reason) {
