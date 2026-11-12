@@ -211,10 +211,24 @@ Expected final result: **0 paid customers, revenue $0.00, average satisfaction N
 
 ## Design evidence
 
-The class diagram, sequence diagram and design discussion are in the PDF report. Copies of the diagrams are in this repository:
+The class diagram, sequence diagram and design discussion are in the PDF report. Copies of the diagrams are in [`docs/`](docs), as SVG (sharp at any zoom) and PNG, with their sources in [`docs/source`](docs/source).
 
-- TODO: add `docs/class-diagram.png` (final design, matching the `stage-3` code)
-- TODO: add `docs/sequence-diagram.png`
+| Diagram | Matches | Files |
+|:---|:---|:---|
+| **Final class diagram** | `stage-3` code | [`class-stage3.svg`](docs/class-stage3.svg), [`.png`](docs/class-stage3.png) |
+| Class diagram, Stage 2 (new classes in green, changed in amber) | `stage-2` code | [`class-stage2.svg`](docs/class-stage2.svg), [`.png`](docs/class-stage2.png) |
+| Class diagram, Stage 1 | `stage-1` code | [`class-stage1.svg`](docs/class-stage1.svg), [`.png`](docs/class-stage1.png) |
+| **Sequence diagram**: customer C5 from turn 13 of `test/victory.txt` to the result check, including the turn-13 manager choice | `stage-3` code | [`sequence.svg`](docs/sequence.svg), [`.png`](docs/sequence.png) |
+
+The class diagrams leave out constructors, `toString()` and plain getters that only return a field. The sequence diagram is the scenario described under "How a manager choice changes the result" above.
+
+### Final class diagram (Stage 3)
+
+![Stage 3 class diagram](docs/class-stage3.svg)
+
+### Sequence diagram
+
+![Sequence diagram](docs/sequence.svg)
 
 ## Video
 

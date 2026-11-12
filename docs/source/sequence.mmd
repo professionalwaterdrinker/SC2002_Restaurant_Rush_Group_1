@@ -1,0 +1,170 @@
+%%{init: {"theme":"base","themeVariables":{"fontSize":"15px","primaryColor":"#dbe7f5","primaryBorderColor":"#333","lineColor":"#222","noteBkgColor":"#fff8c6","noteBorderColor":"#b59b00","activationBkgColor":"#eef3fa"},"sequence":{"mirrorActors":true,"messageMargin":28,"noteMargin":8,"boxMargin":8,"wrap":false,"rightAngles":false}}}%%
+sequenceDiagram
+    autonumber
+    actor M as Manager
+    participant UI as «boundary»<br/>:ConsoleUI
+    participant GC as «control»<br/>:GameController
+    participant CF as arrivals<br/>:CustomerFactory
+    participant R as :Restaurant
+    participant H as host :Host
+    participant W as waiter :Waiter
+    participant CH as chef :Chef
+    participant CA as cashier :Cashier
+    participant C5 as c5<br/>:RegularCustomer
+    participant PS as :PricingService
+    participant CM as item<br/>:ComboMeal
+    participant GR as result<br/>:GameResult
+
+    Note over M,GR: Scenario: Stage 3 base setting, test/victory.txt, from turn 13. C4 sits at table 2 with a READY combo, table 1 is free, Happy Hour was used on turns 10 and 11.<br/>The Waiter has two useful tasks and may do only one. That choice decides whether a fifth customer pays before turn 18.
+
+    rect rgb(245,248,252)
+    Note over M,GR: TURN 13 - GameController.playTurn(13)
+    loop for each s in staff (host, waiter, chef, cashier)
+        GC->>W: startTurn(13)
+        Note right of W: actedThisTurn = false
+    end
+    GC->>CF: arrivalFor(13)
+    CF-->>GC: c5
+    GC->>R: addArrival(c5)
+    Note right of R: roster.add(c5), waitingQueue.join(c5)<br/>c5.satisfaction = 100, status WAITING
+    GC->>UI: displayTurnStart(13, 18, restaurant, staff, c5)
+    loop for each s in staff
+        UI->>W: availableTasks(restaurant)
+        W-->>UI: List of tasks
+    end
+    UI-->>M: start-of-turn display
+    opt happyHour.canActivate()
+        Note over UI,GC: offerHappyHour() - guard is false here (already used), so there is no prompt
+    end
+
+    GC->>UI: askChoice("Host: ...", 1, 2)
+    UI->>M: prompt
+    M-->>UI: 1 (seat), queue 1, table 1
+    UI-->>GC: choices
+    GC->>H: seatCustomer(c5, table1, queue)
+    activate H
+    H->>H: perform(action) [not actedThisTurn]
+    H->>C5: whyNotSeat()
+    C5-->>H: null (status is WAITING)
+    Note right of H: queue.remove(c5), table1.seatCustomer(c5)
+    H->>C5: seat(13)
+    Note right of C5: status SEATED
+    H-->>GC: ActionResult success
+    deactivate H
+    GC->>UI: displayMessage(outcome), displayState(restaurant)
+
+    GC->>UI: askChoice("Waiter: ...", 1, 4)
+    UI->>M: prompt
+    M-->>UI: choice
+    UI-->>GC: choice
+    alt choice = 2 - take c5's order first (the recorded victory run)
+        GC->>W: takeOrder(table1, restaurant)
+        activate W
+        W->>C5: whyNotOrder()
+        C5-->>W: null (status is SEATED)
+        W->>C5: placeOrder(menu, pricingService)
+        activate C5
+        C5->>C5: chooseFood(menu)
+        Note right of C5: polymorphic: Regular rotation,<br/>arrival 5 picks menu item 5<br/>= Pasta + Salad Combo
+        C5->>PS: calculateBill(item, getDiscountPercent() = 0)
+        PS->>CM: getPriceCents()
+        CM-->>PS: 2430 (90% of 1800 + 900)
+        Note right of PS: [customer discount 0%] no change<br/>[happyHour.isActive() = false] no 20% off
+        PS-->>C5: 2430
+        create participant O as order :Order
+        C5->>O: new Order(5, item, 2430)
+        Note right of O: status IN_PREP<br/>bill locked at $24.30
+        C5-->>W: order (status ORDERED)
+        deactivate C5
+        W-->>GC: ActionResult success, bill locked at $24.30
+        deactivate W
+        GC->>UI: askChoice("Chef: ...", 1, 2)
+        UI-->>GC: 1, table 1
+        GC->>CH: prepare(table1)
+        CH->>O: cookOneUnit()
+        Note right of O: 1 of 3 units done
+        CH-->>GC: ActionResult success, 2 units left
+    else choice = 3 - serve c4's READY combo first
+        GC->>W: serveOrder(table2)
+        W-->>GC: ActionResult success, c4 SERVED
+        Note over GC,C5: c5's order is then taken one turn later, on turn 14. The combo is READY on turn 16, SERVED on turn 17,<br/>and c5 is only READY_TO_PAY on turn 18, too late to be charged. Final result: 4 paid customers, $64.08.
+    end
+
+    GC->>R: finishEating(13)
+    R-->>GC: empty list
+    GC->>CA: processPayment(restaurant)
+    CA-->>GC: ActionResult failure, nobody ready to pay
+    GC->>R: processWaitingAndDepartures(13)
+    R->>C5: endOfTurn(13), via roster
+    Note right of C5: [status.isWaitingForService()]<br/>satisfaction 100 - 8 = 92
+    C5-->>R: false (has not left)
+    GC->>UI: displayTurnResults(13, 18, restaurant, events)
+    end
+
+    rect rgb(245,248,252)
+    Note over M,GR: TURNS 14 AND 15 - the Chef finishes the combo (on turn 14 the Waiter serves c4)
+    loop turn = 14, 15 [order.isInPrep()]
+        GC->>CH: prepare(table1)
+        CH->>O: cookOneUnit()
+        GC->>R: processWaitingAndDepartures(turn)
+        R->>C5: endOfTurn(turn)
+    end
+    Note right of O: after unit 3 of 3 (turn 15)<br/>status READY
+    Note right of C5: satisfaction 84, then 76
+    Note over GC,O: The Waiter acts before the Chef, so a dish finished this turn can be served on the next turn at the earliest.
+    end
+
+    rect rgb(245,248,252)
+    Note over M,GR: TURN 16 - READY to SERVED
+    GC->>W: serveOrder(table1)
+    activate W
+    W->>C5: whyNotServe()
+    C5->>O: isReady()
+    O-->>C5: true
+    C5-->>W: null
+    W->>C5: serve(16)
+    C5->>O: markServed()
+    Note right of O: status SERVED
+    Note right of C5: status EATING, servedTurn = 16<br/>satisfaction stays 76 from now on
+    W-->>GC: ActionResult success, order SERVED
+    deactivate W
+    end
+
+    rect rgb(245,248,252)
+    Note over M,GR: TURN 17 - eating
+    GC->>R: finishEating(17)
+    R->>C5: finishEating(17), via roster
+    Note right of C5: [status EATING and servedTurn < turn]<br/>status READY_TO_PAY, readyToPayTurn = 17
+    C5-->>R: true
+    GC->>CA: processPayment(restaurant)
+    Note right of CA: c5 is not charged yet:<br/>guard [readyToPayTurn < turn] is false
+    end
+
+    rect rgb(245,248,252)
+    Note over M,GR: TURN 18 - payment
+    GC->>CA: processPayment(restaurant)
+    activate CA
+    CA->>R: getRoster().readyToPay(18)
+    R-->>CA: [c5], oldest first
+    CA->>C5: pay(18)
+    C5->>O: markPaid()
+    Note right of O: status PAID
+    C5-->>CA: 2430 (status PAID, recordedSatisfaction = 76)
+    CA->>R: addRevenue(2430)
+    Note right of R: table1.clearTable()<br/>revenue $64.08 + $24.30 = $88.38
+    CA-->>GC: ActionResult success, collected $24.30
+    deactivate CA
+    end
+
+    rect rgb(245,248,252)
+    Note over M,GR: RESULT CHECK - after the loop over 18 turns, in GameController.startGame()
+    GC->>GR: isVictory()
+    GR->>R: getRoster().paidCount(), getTotalRevenueCents(),<br/>getRoster().averagePaidSatisfaction()
+    R-->>GR: 5, 8838 cents, 83.6
+    Note right of GR: [5 >= 4] and [8838 >= 4500] and [83.6 >= 60]
+    GR-->>GC: true
+    GC->>GR: summaryLines()
+    GR-->>GC: one line per target
+    GC->>UI: displayFinalResult(true, lines)
+    UI-->>M: VICTORY - 5 paid, $88.38, average 83.6
+    end
