@@ -6,6 +6,7 @@ import restaurantrush.model.CustomerStatus;
 import restaurantrush.model.Order;
 import restaurantrush.model.menu.Menu;
 import restaurantrush.model.menu.MenuItem;
+import restaurantrush.util.MoneyUtils;
 
 public abstract class Customer {
     private final int id;
@@ -25,6 +26,10 @@ public abstract class Customer {
     public abstract String getTypeName();
 
     public abstract int getSatisfactionLossPerTurn();
+
+    public int getDiscountPercent() {
+        return 0;
+    }
 
     public MenuItem chooseFood(Menu menu) {
         List<MenuItem> items = menu.getItems();
@@ -87,11 +92,15 @@ public abstract class Customer {
         status = CustomerStatus.SEATED;
     }
 
-    /** The customer chooses their own food (the manager never does). */
+    /**
+     * The customer chooses their own food (the manager never does) and the bill
+     * is fixed now, after this customer's own discount.
+     */
     public Order placeOrder(Menu menu) {
         check(whyNotOrder());
         MenuItem item = chooseFood(menu);
-        order = new Order(id, item, item.getPriceCents());
+        int bill = MoneyUtils.percentOff(item.getPriceCents(), getDiscountPercent());
+        order = new Order(id, item, bill);
         status = CustomerStatus.ORDERED;
         return order;
     }

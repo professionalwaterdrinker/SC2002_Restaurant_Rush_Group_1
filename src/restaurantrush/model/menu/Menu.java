@@ -44,6 +44,15 @@ public class Menu {
         return items.get(number - 1);
     }
 
+    /** The most expensive item, useful for CriticCustomer's ordering behaviour. */
+    public MenuItem getMostExpensive() {
+        MenuItem best = null;
+        for (MenuItem item : items) {
+            if (best == null || item.getPriceCents() > best.getPriceCents()) best = item;
+        }
+        return best;
+    }
+
     public int size() {
         return items.size();
     }
