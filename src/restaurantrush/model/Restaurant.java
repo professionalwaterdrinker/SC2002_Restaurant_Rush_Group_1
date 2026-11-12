@@ -7,13 +7,12 @@ import restaurantrush.model.customer.Customer;
 import restaurantrush.model.customer.CustomerRoster;
 import restaurantrush.model.menu.Menu;
 
+/** Aggregate root of the domain: owns the tables, queue, customer record, menu and revenue. */
 public class Restaurant {
     private final List<Table> tables;
     private final WaitingQueue waitingQueue;
     private final CustomerRoster roster;
     private final Menu menu;
-    private final HappyHour happyHour;
-    private final PricingService pricingService;
     private int totalRevenueCents;
 
     public Restaurant(int numTables, Menu menu) {
@@ -24,8 +23,6 @@ public class Restaurant {
         this.waitingQueue = new WaitingQueue();
         this.roster = new CustomerRoster();
         this.menu = menu;
-        this.happyHour = new HappyHour();
-        this.pricingService = new PricingService(happyHour);
         this.totalRevenueCents = 0;
     }
 
@@ -42,13 +39,24 @@ public class Restaurant {
         return null;
     }
 
-    public Table getFirstFreeTable() {
+    public List<Table> getFreeTables() {
+        List<Table> free = new ArrayList<>();
         for (Table t : tables) {
             if (!t.isOccupied()) {
-                return t;
+                free.add(t);
             }
         }
-        return null;
+        return free;
+    }
+
+    public List<Table> getOccupiedTables() {
+        List<Table> occupied = new ArrayList<>();
+        for (Table t : tables) {
+            if (t.isOccupied()) {
+                occupied.add(t);
+            }
+        }
+        return occupied;
     }
 
     public WaitingQueue getWaitingQueue() {
@@ -61,14 +69,6 @@ public class Restaurant {
 
     public Menu getMenu() {
         return menu;
-    }
-
-    public HappyHour getHappyHour() {
-        return happyHour;
-    }
-
-    public PricingService getPricingService() {
-        return pricingService;
     }
 
     public void addArrival(Customer customer) {
@@ -86,6 +86,30 @@ public class Restaurant {
 
     public int getTotalRevenueCents() {
         return totalRevenueCents;
+    }
+
+    /** Step 4a: customers served on an earlier turn finish eating and become READY_TO_PAY. */
+    public List<Customer> finishEating(int turn) {
+        return roster.finishEating(turn);
+    }
+
+    /**
+     * Step 5: every customer still waiting for a table or for food loses
+     * satisfaction. Anyone who reaches 0 leaves: their order is cancelled by the
+     * customer, and the queue place or table is released here.
+     *
+     * @return the customers who left this turn
+     */
+    public List<Customer> processWaitingAndDepartures(int turn) {
+        List<Customer> departed = roster.endOfTurn(turn);
+        waitingQueue.removeDeparted();
+        for (Customer c : departed) {
+            Table table = findTableWithCustomer(c);
+            if (table != null) {
+                table.clearTable();
+            }
+        }
+        return departed;
     }
 
     public Table findTableWithCustomer(Customer customer) {

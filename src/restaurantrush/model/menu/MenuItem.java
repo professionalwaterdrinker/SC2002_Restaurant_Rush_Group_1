@@ -21,7 +21,7 @@ public abstract class MenuItem {
         return name;
     }
 
-    /** Base price in cents, before any discount or Happy Hour. */
+    /** Price in cents. */
     public abstract int getPriceCents();
 
     /** Number of Chef actions needed to finish this item. */

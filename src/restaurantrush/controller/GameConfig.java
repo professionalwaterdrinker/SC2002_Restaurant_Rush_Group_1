@@ -2,35 +2,39 @@ package restaurantrush.controller;
 
 import restaurantrush.model.menu.Menu;
 
-public class GameConfig {
-    private static Menu menu = Menu.menuWithCombos();
-    private static int numTables = 2;
-    private static int turns = 18;
-    private static int paidCustomersGoal = 4;
-    private static int revenueGoal = 4500; // $45.00 in cents
-    private static double avgSatisfactionGoal = 60.0;
+/** The required base setting (handout Section 2.1). */
+public final class GameConfig {
+    private static final int NUM_TABLES = 2;
+    private static final int TURNS = 18;
+    private static final int PAID_CUSTOMERS_GOAL = 4;
+    private static final int REVENUE_GOAL_CENTS = 4500; // $45.00
+    private static final int AVG_SATISFACTION_GOAL = 60;
 
+    private GameConfig() {
+    }
+
+    /** Salad, Burger and Pasta. */
     public static Menu getMenu() {
-        return menu;
+        return Menu.standardMenu();
     }
 
     public static int getNumTables() {
-        return numTables;
+        return NUM_TABLES;
     }
 
     public static int getTurns() {
-        return turns;
+        return TURNS;
     }
 
     public static int getPaidCustomersGoal() {
-        return paidCustomersGoal;
+        return PAID_CUSTOMERS_GOAL;
     }
 
     public static int getRevenueGoal() {
-        return revenueGoal;
+        return REVENUE_GOAL_CENTS;
     }
 
-    public static double getAvgSatisfactionGoal() {
-        return avgSatisfactionGoal;
+    public static int getAvgSatisfactionGoal() {
+        return AVG_SATISFACTION_GOAL;
     }
 }

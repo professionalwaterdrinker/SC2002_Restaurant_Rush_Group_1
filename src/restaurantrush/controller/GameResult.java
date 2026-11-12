@@ -1,43 +1,57 @@
 package restaurantrush.controller;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import restaurantrush.model.Restaurant;
 import restaurantrush.util.MoneyUtils;
 
+/**
+ * Step 6: checks the three targets after the last turn.
+ * Victory needs at least 4 paid customers AND revenue of at least $45.00 AND
+ * an average satisfaction of paid customers of at least 60.
+ */
 public class GameResult {
-    /*win condition default at least 4 paid customers AND revenue at least $45 AND average
-    satisfaction of paid customers at least 60 in GameConfig*/
-
-    private Restaurant restaurant;
-    private boolean win;
+    private final Restaurant restaurant;
 
     public GameResult(Restaurant restaurant) {
         this.restaurant = restaurant;
-        this.win = false;
     }
 
-    public boolean checkWin() {
-        int paid = restaurant.getRoster().paidCount();
-        int revenue = restaurant.getTotalRevenueCents();
-        double avgSatisfaction = restaurant.getRoster().averagePaidSatisfaction();
-        win = paid >= GameConfig.getPaidCustomersGoal() && revenue >= GameConfig.getRevenueGoal() && avgSatisfaction >= GameConfig.getAvgSatisfactionGoal();
-        return win;
+    public boolean paidTargetMet() {
+        return restaurant.getRoster().paidCount() >= GameConfig.getPaidCustomersGoal();
     }
 
-    public String resultMessage() {
-        if (checkWin()) {
-            return "Victory! Restaurant managed.";
-        } else {
-            String reason = "";
-            if (restaurant.getRoster().paidCount() < GameConfig.getPaidCustomersGoal()) {
-                reason += restaurant.getRoster().paidCount() + " paid customers out of " + GameConfig.getPaidCustomersGoal() + ". ";
-            }
-            if (restaurant.getTotalRevenueCents() < GameConfig.getRevenueGoal()) {
-                reason += MoneyUtils.formatCents(restaurant.getTotalRevenueCents()) + " revenue out of " + MoneyUtils.formatCents(GameConfig.getRevenueGoal()) + ". ";
-            }
-            if (restaurant.getRoster().averagePaidSatisfaction() < GameConfig.getAvgSatisfactionGoal()) {
-                reason += restaurant.getRoster().averagePaidSatisfactionText() + " average satisfaction out of " + GameConfig.getAvgSatisfactionGoal() + ".";
-            }
-            return "Defeat! Back to business school. " + reason;
-        }
+    public boolean revenueTargetMet() {
+        return restaurant.getTotalRevenueCents() >= GameConfig.getRevenueGoal();
+    }
+
+    /** With no paid customers there is no average, so the target is not met. */
+    public boolean satisfactionTargetMet() {
+        return restaurant.getRoster().paidCount() > 0
+                && restaurant.getRoster().averagePaidSatisfaction() >= GameConfig.getAvgSatisfactionGoal();
+    }
+
+    public boolean isVictory() {
+        return paidTargetMet() && revenueTargetMet() && satisfactionTargetMet();
+    }
+
+    /** One line per target, with the value reached and whether it was met. */
+    public List<String> summaryLines() {
+        List<String> lines = new ArrayList<>();
+        lines.add(line("Paid customers", String.valueOf(restaurant.getRoster().paidCount()),
+                String.valueOf(GameConfig.getPaidCustomersGoal()), paidTargetMet()));
+        lines.add(line("Revenue", MoneyUtils.formatCents(restaurant.getTotalRevenueCents()),
+                MoneyUtils.formatCents(GameConfig.getRevenueGoal()), revenueTargetMet()));
+        lines.add(line("Average satisfaction of paid customers",
+                restaurant.getRoster().averagePaidSatisfactionText(),
+                String.valueOf(GameConfig.getAvgSatisfactionGoal()), satisfactionTargetMet()));
+        lines.add("Served customers: " + restaurant.getRoster().servedCount()
+                + " | Unhappy departures: " + restaurant.getRoster().unhappyDepartures());
+        return lines;
+    }
+
+    private static String line(String label, String value, String target, boolean met) {
+        return (met ? "[MET]     " : "[NOT MET] ") + label + ": " + value + " (target: at least " + target + ")";
     }
 }

@@ -1,11 +1,14 @@
 package restaurantrush.model.staff;
 
+import java.util.List;
 import java.util.function.Supplier;
 
-import restaurantrush.model.Table;
-import restaurantrush.model.WaitingQueue;
-import restaurantrush.model.customer.Customer;
+import restaurantrush.model.Restaurant;
 
+/**
+ * A member of staff. The "at most one task per turn" rule lives here once, in
+ * perform(), so no subclass can forget it. A refused task does not use up the turn.
+ */
 public abstract class Staff {
 
     private final String name;
@@ -28,6 +31,12 @@ public abstract class Staff {
 
     public abstract String getRole();
 
+    /**
+     * The tasks this member of staff could do right now, for the start-of-turn
+     * display. Each role answers for itself, so the UI needs no role checks.
+     */
+    public abstract List<String> availableTasks(Restaurant restaurant);
+
     public boolean hasActedThisTurn() {
         return actedThisTurn;
     }
@@ -40,6 +49,7 @@ public abstract class Staff {
         return currentTurn;
     }
 
+    /** Runs a task. Only a successful task counts as this turn's task. */
     protected final ActionResult perform(Supplier<ActionResult> action) {
         if (actedThisTurn) {
             return ActionResult.failure(getRole() + " " + name
@@ -50,29 +60,5 @@ public abstract class Staff {
             actedThisTurn = true;
         }
         return result;
-    }
-
-    protected ActionResult seat(Customer customer, Table table, WaitingQueue queue) {
-        if (customer == null) {
-            return ActionResult.failure("No customer selected.");
-        }
-        if (table == null) {
-            return ActionResult.failure("No table selected.");
-        }
-        String why = customer.whyNotSeat();
-        if (why != null) {
-            return ActionResult.failure(why);
-        }
-        if (!queue.contains(customer)) {
-            return ActionResult.failure(customer.label() + " is not in the waiting queue.");
-        }
-        if (table.isOccupied()) {
-            return ActionResult.failure("Table " + table.getTableNumber() + " is occupied.");
-        }
-        queue.remove(customer);
-        table.seatCustomer(customer);
-        customer.seat(currentTurn);
-        return ActionResult.success(customer.label() + " seated at table "
-                + table.getTableNumber() + ".");
     }
 }

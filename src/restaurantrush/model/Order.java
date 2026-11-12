@@ -1,14 +1,11 @@
 package restaurantrush.model;
 
 import restaurantrush.model.menu.MenuItem;
+import restaurantrush.util.MoneyUtils;
 
 /**
  * One customer's food order. Tracks prep progress and status, and holds the
- * bill, which is LOCKED IN when the order is taken. That way, if Happy Hour
- * starts or ends later, this customer's price doesn't change.
- *
- * The bill is calculated by PricingService and passed in; Order never does
- * pricing maths itself (single responsibility).
+ * bill, which is fixed when the order is taken.
  */
 public class Order {
     private static int nextId = 1;
@@ -81,7 +78,8 @@ public class Order {
 
     @Override
     public String toString() {
-        return String.format("Order #%d [customer %d] %s - %s (%d/%d units)",
-                id, customerId, item.getName(), status, prepUnitsDone, item.getPrepUnits());
+        return String.format("Order #%d %s, bill %s - %s (%d/%d units)",
+                id, item.getName(), MoneyUtils.formatCents(billCents), status,
+                prepUnitsDone, item.getPrepUnits());
     }
 }

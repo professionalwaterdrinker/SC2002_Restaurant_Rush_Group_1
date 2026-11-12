@@ -4,7 +4,6 @@ import java.util.List;
 
 import restaurantrush.model.CustomerStatus;
 import restaurantrush.model.Order;
-import restaurantrush.model.PricingService;
 import restaurantrush.model.menu.Menu;
 import restaurantrush.model.menu.MenuItem;
 
@@ -26,10 +25,6 @@ public abstract class Customer {
     public abstract String getTypeName();
 
     public abstract int getSatisfactionLossPerTurn();
-
-    public int getDiscountPercent() {
-        return 0;
-    }
 
     public MenuItem chooseFood(Menu menu) {
         List<MenuItem> items = menu.getItems();
@@ -92,11 +87,11 @@ public abstract class Customer {
         status = CustomerStatus.SEATED;
     }
 
-    public Order placeOrder(Menu menu, PricingService pricing, int turn) {
+    /** The customer chooses their own food (the manager never does). */
+    public Order placeOrder(Menu menu) {
         check(whyNotOrder());
         MenuItem item = chooseFood(menu);
-        int bill = pricing.calculateBill(item, getDiscountPercent());
-        order = new Order(id, item, bill);
+        order = new Order(id, item, item.getPriceCents());
         status = CustomerStatus.ORDERED;
         return order;
     }
@@ -138,12 +133,6 @@ public abstract class Customer {
             order.cancel();
         }
         return true;
-    }
-
-    public void recoverSatisfaction(int amount) {
-        if (status.isWaitingForService()) {
-            satisfaction = Math.min(100, satisfaction + amount);
-        }
     }
 
     private void check(String reason) {

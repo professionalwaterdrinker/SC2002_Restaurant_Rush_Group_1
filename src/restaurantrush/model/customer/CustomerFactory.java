@@ -17,8 +17,8 @@ public class CustomerFactory {
     public static CustomerFactory baseSetting() {
         CustomerFactory factory = new CustomerFactory();
         factory.add(new RegularCustomer(1, 1));
-        factory.add(new VIPCustomer(2, 4));
-        factory.add(new CriticCustomer(3, 7));
+        factory.add(new RegularCustomer(2, 4));
+        factory.add(new RegularCustomer(3, 7));
         factory.add(new RegularCustomer(4, 10));
         factory.add(new RegularCustomer(5, 13));
         factory.add(new RegularCustomer(6, 16));

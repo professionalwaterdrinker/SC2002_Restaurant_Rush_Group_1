@@ -8,23 +8,12 @@ import java.util.List;
 public class Menu {
     private final List<MenuItem> items = new ArrayList<>();
 
-    /** Stage 1/2 menu: Salad, Burger, Pasta. */
+    /** Salad, Burger, Pasta. */
     public static Menu standardMenu() {
         Menu menu = new Menu();
         menu.addItem(new Dish("Salad", 900, 1));
         menu.addItem(new Dish("Burger", 1500, 1));
         menu.addItem(new Dish("Pasta", 1800, 2));
-        return menu;
-    }
-
-    /** Stage 3 menu: the standard dishes plus combo meals. */
-    public static Menu menuWithCombos() {
-        Menu menu = standardMenu();
-        MenuItem salad = menu.findByName("Salad");
-        MenuItem burger = menu.findByName("Burger");
-        MenuItem pasta = menu.findByName("Pasta");
-        menu.addItem(new ComboMeal("Burger + Salad Combo", burger, salad));
-        menu.addItem(new ComboMeal("Pasta + Salad Combo", pasta, salad));
         return menu;
     }
 
@@ -53,23 +42,6 @@ public class Menu {
     public MenuItem getByNumber(int number) {
         if (number < 1 || number > items.size()) return null;
         return items.get(number - 1);
-    }
-
-    public List<ComboMeal> getCombos() {
-        List<ComboMeal> combos = new ArrayList<>();
-        for (MenuItem item : items) {
-            if (item instanceof ComboMeal) combos.add((ComboMeal) item);
-        }
-        return combos;
-    }
-
-    /** The most expensive item, useful for CriticCustomer's ordering behaviour. */
-    public MenuItem getMostExpensive() {
-        MenuItem best = null;
-        for (MenuItem item : items) {
-            if (best == null || item.getPriceCents() > best.getPriceCents()) best = item;
-        }
-        return best;
     }
 
     public int size() {
