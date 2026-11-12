@@ -19,7 +19,7 @@ public class CustomerChecks {
         servedCustomersStopLosing();
         eatingAndPaymentTiming();
         invalidSteps();
-        bills();
+        billsAndDiscounts();
         foodChoice();
         queueBehaviour();
         baseArrivals();
@@ -70,6 +70,8 @@ public class CustomerChecks {
 
     static void lossPerTypeAndLeaving() {
         check(turnsUntilLeaving(new RegularCustomer(1, 1)) == 13, "Regular leaves after 13 waiting turns");
+        check(turnsUntilLeaving(new VIPCustomer(1, 1)) == 20, "VIP leaves after 20 waiting turns");
+        check(turnsUntilLeaving(new CriticCustomer(1, 1)) == 9, "Critic leaves after 9 waiting turns");
         Customer c = new RegularCustomer(1, 1);
         turnsUntilLeaving(c);
         check(c.getSatisfaction() == 0, "satisfaction never goes below 0");
@@ -78,7 +80,7 @@ public class CustomerChecks {
     }
 
     static void leavingCancelsTheOrder() {
-        Customer c = new RegularCustomer(1, 1);
+        Customer c = new CriticCustomer(1, 1);
         c.seat(1);
         Order order = c.placeOrder(Menu.standardMenu(), 1);
         turnsUntilLeaving(c);
@@ -87,7 +89,7 @@ public class CustomerChecks {
     }
 
     static void servedCustomersStopLosing() {
-        Customer c = servedCustomer(new RegularCustomer(1, 1), 2);
+        Customer c = servedCustomer(new CriticCustomer(1, 1), 2);
         for (int t = 2; t < 12; t++) {
             c.endOfTurn(t);
         }
@@ -121,11 +123,13 @@ public class CustomerChecks {
         check(c.getStatus() == CustomerStatus.ORDERED, "a refused step changes nothing");
     }
 
-    static void bills() {
+    static void billsAndDiscounts() {
         Menu menu = Menu.standardMenu();
-        check(billFor(new RegularCustomer(1, 1), menu) == 900, "Salad is $9.00");
-        check(billFor(new RegularCustomer(2, 1), menu) == 1500, "Burger is $15.00");
-        check(billFor(new RegularCustomer(3, 1), menu) == 1800, "Pasta is $18.00");
+        check(billFor(new RegularCustomer(1, 1), menu) == 900, "Regular Salad is $9.00");
+        check(billFor(new RegularCustomer(2, 1), menu) == 1500, "Regular Burger is $15.00");
+        check(billFor(new VIPCustomer(2, 4), menu) == 1350, "VIP Burger is $13.50");
+        check(billFor(new VIPCustomer(1, 4), menu) == 810, "VIP Salad is $8.10");
+        check(billFor(new CriticCustomer(3, 7), menu) == 1800, "Critic pays full price for Pasta");
     }
 
     static void foodChoice() {
@@ -135,23 +139,23 @@ public class CustomerChecks {
             check(new RegularCustomer(id, 1).chooseFood(menu).getName().equals(expected[id - 1]),
                     "customer " + id + " picks " + expected[id - 1]);
         }
+        check(new VIPCustomer(2, 4).chooseFood(menu).getName().equals("Burger"), "VIP uses the same rotation");
+        check(new CriticCustomer(1, 1).chooseFood(menu).getName().equals("Pasta"), "Critic picks the most expensive");
 
     }
 
     static void queueBehaviour() {
         WaitingQueue q = new WaitingQueue();
         Customer a = new RegularCustomer(1, 1);
-        Customer b = new RegularCustomer(2, 4);
+        Customer b = new CriticCustomer(2, 4);
         q.join(a);
         q.join(b);
         check(q.get(1) == a && q.get(2) == b, "queue keeps arrival order, positions start at 1");
         check(q.get(3) == null && q.get(0) == null, "out-of-range position gives null");
         q.join(a);
         check(q.size() == 2, "same customer is not added twice");
-        for (int t = 1; t <= 13; t++) {
-            if (t <= 9) {
-                a.endOfTurn(t);
-            }
+        for (int t = 1; t <= 9; t++) {
+            a.endOfTurn(t);
             b.endOfTurn(t);
         }
         List<Customer> gone = q.removeDeparted();
@@ -172,9 +176,8 @@ public class CustomerChecks {
         }
         check(f.arrivalFor(2) == null, "nobody arrives on turn 2");
         check(f.arrivalFor(4) == f.arrivalFor(4), "same turn gives the same customer");
-        for (Customer c : f.allCustomers()) {
-            check(c.getTypeName().equals("Regular"), "customer " + c.getId() + " is a Regular");
-        }
+        check(f.arrivalFor(4) instanceof VIPCustomer && f.arrivalFor(7) instanceof CriticCustomer,
+                "base run includes a VIP and a Critic");
     }
 
     static void rosterTotals() {
@@ -183,8 +186,8 @@ public class CustomerChecks {
 
         Menu menu = Menu.standardMenu();
         Customer a = new RegularCustomer(1, 1);
-        Customer b = new RegularCustomer(2, 1);
-        Customer c = new RegularCustomer(3, 1);
+        Customer b = new VIPCustomer(2, 1);
+        Customer c = new CriticCustomer(3, 1);
         r.add(a);
         r.add(b);
         r.add(c);
@@ -201,12 +204,12 @@ public class CustomerChecks {
         List<Customer> ready = r.readyToPay(4);
         check(ready.size() == 2 && ready.get(0) == a, "oldest ready customer is first");
         int revenue = a.pay(4) + b.pay(5);
-        check(revenue == 900 + 1500, "revenue is $9.00 + $15.00");
-        for (int t = 2; t <= 13; t++) {
+        check(revenue == 900 + 1350, "revenue is $9.00 + $13.50");
+        for (int t = 2; t <= 9; t++) {
             r.endOfTurn(t);
         }
         check(r.paidCount() == 2 && r.servedCount() == 2 && r.unhappyDepartures() == 1, "paid, served, departures");
-        check(r.averagePaidSatisfactionText().equals("92.0"), "average of 92 and 92 is 92.0");
+        check(r.averagePaidSatisfactionText().equals("93.5"), "average of 92 and 95 is 93.5");
         check(r.present().isEmpty(), "nobody left in the restaurant");
     }
 

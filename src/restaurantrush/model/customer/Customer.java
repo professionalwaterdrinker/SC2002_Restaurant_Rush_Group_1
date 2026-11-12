@@ -26,6 +26,10 @@ public abstract class Customer {
 
     public abstract int getSatisfactionLossPerTurn();
 
+    public int getDiscountPercent() {
+        return 0;
+    }
+
     public MenuItem chooseFood(Menu menu) {
         List<MenuItem> items = menu.getItems();
         return items.get((id - 1) % items.size());
@@ -90,7 +94,9 @@ public abstract class Customer {
     public Order placeOrder(Menu menu, int turn) {
         check(whyNotOrder());
         MenuItem item = chooseFood(menu);
-        order = new Order(id, item, item.getPriceCents());
+        // own discount (VIP 10%), rounded to the nearest cent
+        int bill = Math.round(item.getPriceCents() * (100 - getDiscountPercent()) / 100.0f);
+        order = new Order(id, item, bill);
         status = CustomerStatus.ORDERED;
         return order;
     }
