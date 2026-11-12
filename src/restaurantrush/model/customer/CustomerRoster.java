@@ -50,12 +50,6 @@ public class CustomerRoster {
         return left;
     }
 
-    public void recoverWaiting(int amount) {
-        for (Customer c : customers) {
-            c.recoverSatisfaction(amount);
-        }
-    }
-
     public int paidCount() {
         int count = 0;
         for (Customer c : customers) {

@@ -4,11 +4,7 @@ import restaurantrush.model.menu.MenuItem;
 
 /**
  * One customer's food order. Tracks prep progress and status, and holds the
- * bill, which is LOCKED IN when the order is taken. That way, if Happy Hour
- * starts or ends later, this customer's price doesn't change.
- *
- * The bill is calculated by PricingService and passed in; Order never does
- * pricing maths itself (single responsibility).
+ * bill, which is fixed when the order is taken.
  */
 public class Order {
     private static int nextId = 1;

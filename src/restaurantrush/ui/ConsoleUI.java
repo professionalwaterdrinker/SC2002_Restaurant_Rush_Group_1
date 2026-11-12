@@ -18,9 +18,6 @@ public class ConsoleUI {
     public void displayTurnHeader(int turn, Restaurant restaurant) {
         System.out.println("\n=================================================================================================");
         System.out.println("                                        TURN " + turn + " / 18");
-        if (restaurant.getHappyHour().isActive()) {
-            System.out.println("   *** HAPPY HOUR ACTIVE (" + restaurant.getHappyHour().getTurnsRemaining() + " turns left) ***");
-        }
         System.out.println("=================================================================================================");
 
         String rev = MoneyUtils.formatCents(restaurant.getTotalRevenueCents());
@@ -63,6 +60,21 @@ public class ConsoleUI {
             System.out.println();
         }
         System.out.println("-------------------------------------------------------------------------------------------------");
+    }
+
+    public void displayStaffTasks(List<String> tasks) {
+        System.out.println("Staff tasks available:");
+        if (tasks.isEmpty()) {
+            System.out.println("  [none - staff can only wait this turn]");
+        }
+        for (String task : tasks) {
+            System.out.println("  " + task);
+        }
+        System.out.println("-------------------------------------------------------------------------------------------------");
+    }
+
+    public void displayTurnsUsed(int turn, int totalTurns) {
+        System.out.println("Turns used: " + turn + " / " + totalTurns);
     }
 
     public void displayMessage(String msg) {

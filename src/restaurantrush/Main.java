@@ -8,19 +8,17 @@ import restaurantrush.controller.GameResult;
 import restaurantrush.model.staff.Cashier;
 import restaurantrush.model.staff.Waiter;
 import restaurantrush.model.staff.Chef;
-import restaurantrush.model.staff.Host;
 
 public class Main {
     public static void main(String[] args) {
         Waiter waiter = new Waiter("waiter");
         Chef chef = new Chef("chef");
         Cashier cashier = new Cashier("cashier");
-        Host host = new Host("host");
         ConsoleUI console = new ConsoleUI();
         Restaurant restaurant = new Restaurant(GameConfig.getNumTables(), GameConfig.getMenu());
         GameResult result = new GameResult(restaurant);
 
-        GameController controller = new GameController(restaurant, console, waiter, chef, cashier, host, result);
+        GameController controller = new GameController(restaurant, console, waiter, chef, cashier, result);
 
         controller.startGame();
     }
